@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1078271459640",
+    "project_id": "cooker-e6404",
+    "storage_bucket": "cooker-e6404.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1078271459640:android:f8398ab3a12e86e7f741cd",
+        "android_client_info": {
+          "package_name": "com.example.homecook"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyClS4LB1LVedDCzY_dG9LXw0r0tmq21jvM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
