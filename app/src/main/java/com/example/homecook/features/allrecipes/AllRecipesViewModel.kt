@@ -1,7 +1,6 @@
 package com.example.homecook.features.allrecipes
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.homecook.data.remote.FirestoreRecipeRepository
@@ -16,16 +15,22 @@ class AllRecipesViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setMarked(recipeId: String, marked: Boolean) {
         viewModelScope.launch {
-            try {
-                Log.d("AllRecipesVM", "Setting marked=$marked for recipeId=$recipeId")
-                recipeRepo.setMarked(recipeId, marked)
-                Log.d("AllRecipesVM", "Marked write SUCCESS for recipeId=$recipeId")
+            recipeRepo.setMarked(recipeId, marked)
+            shoppingRepo.syncFromMarkedRecipes()
+        }
+    }
 
-                shoppingRepo.syncFromMarkedRecipes()
-                Log.d("AllRecipesVM", "Shopping sync SUCCESS")
-            } catch (e: Exception) {
-                Log.e("AllRecipesVM", "Mark/write FAILED", e)
-            }
+    fun deletePrivateOnly(recipeId: String) {
+        viewModelScope.launch {
+            recipeRepo.deletePrivateOnly(recipeId)
+            shoppingRepo.syncFromMarkedRecipes()
+        }
+    }
+
+    fun deletePrivateAndShared(recipeId: String) {
+        viewModelScope.launch {
+            recipeRepo.deletePrivateAndShared(recipeId)
+            shoppingRepo.syncFromMarkedRecipes()
         }
     }
 }

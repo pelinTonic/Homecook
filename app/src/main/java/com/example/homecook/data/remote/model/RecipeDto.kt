@@ -2,6 +2,7 @@ package com.example.homecook.data.remote.model
 
 import com.google.firebase.firestore.Exclude
 import com.google.firebase.firestore.IgnoreExtraProperties
+import com.google.firebase.firestore.PropertyName
 
 @IgnoreExtraProperties
 data class IngredientDto(
@@ -26,10 +27,15 @@ data class RecipeDto(
     var createdAt: Long = 0L,
     var updatedAt: Long = 0L,
 
+    @get:PropertyName("isMarked")
+    @set:PropertyName("isMarked")
     var isMarked: Boolean = false,
 
     var ingredients: List<IngredientDto> = emptyList(),
     var steps: List<StepDto> = emptyList(),
 
-    var authorUid: String = ""
+    var authorUid: String = "",
+
+    // ✅ NEW: if shared, contains docId in sharedRecipes
+    var sharedId: String = ""
 )

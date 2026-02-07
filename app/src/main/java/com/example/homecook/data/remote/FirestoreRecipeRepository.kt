@@ -14,44 +14,10 @@ class FirestoreRecipeRepository(
 ) {
 
     private fun DocumentSnapshot.toRecipeDto(): RecipeDto? {
-        val title = getString("title") ?: ""
-        val createdAt = getLong("createdAt") ?: 0L
-        val updatedAt = getLong("updatedAt") ?: 0L
-        val isMarked = getBoolean("isMarked") ?: false
-        val authorUid = getString("authorUid") ?: ""
-
-        // ingredients
-        val ingredientsAny = get("ingredients") as? List<*>
-        val ingredients = ingredientsAny?.mapNotNull { item ->
-            val m = item as? Map<*, *> ?: return@mapNotNull null
-            val name = m["name"] as? String ?: return@mapNotNull null
-            val quantity = (m["quantity"] as? Number)?.toDouble() ?: 0.0
-            val unit = m["unit"] as? String ?: ""
-            com.example.homecook.data.remote.model.IngredientDto(name = name, quantity = quantity, unit = unit)
-        } ?: emptyList()
-
-        // steps
-        val stepsAny = get("steps") as? List<*>
-        val steps = stepsAny?.mapNotNull { item ->
-            val m = item as? Map<*, *> ?: return@mapNotNull null
-            val number = (m["number"] as? Number)?.toInt() ?: 0
-            val description = m["description"] as? String ?: ""
-            val timeMinutes = (m["timeMinutes"] as? Number)?.toInt()
-            com.example.homecook.data.remote.model.StepDto(number = number, description = description, timeMinutes = timeMinutes)
-        } ?: emptyList()
-
-        return RecipeDto(
-            id = id,
-            title = title,
-            createdAt = createdAt,
-            updatedAt = updatedAt,
-            isMarked = isMarked,
-            ingredients = ingredients,
-            steps = steps,
-            authorUid = authorUid
-        )
+        val dto = this.toObject(RecipeDto::class.java) ?: return null
+        dto.id = this.id
+        return dto
     }
-
 
     fun observeAllRecipes(): Flow<List<RecipeDto>> = callbackFlow {
         val reg = paths.recipes()
@@ -64,31 +30,6 @@ class FirestoreRecipeRepository(
                 val list = snap?.documents?.mapNotNull { it.toRecipeDto() } ?: emptyList()
                 trySend(list)
             }
-
-        awaitClose { reg.remove() }
-    }
-
-    /**
-     * NOTE:
-     * whereEqualTo("isMarked", true) + orderBy("createdAt") often requires a composite index.
-     * To avoid that, we query only on isMarked and sort client-side.
-     */
-    fun observeMarkedRecipes(): Flow<List<RecipeDto>> = callbackFlow {
-        val reg = paths.recipes()
-            .whereEqualTo("isMarked", true)
-            .addSnapshotListener { snap, err ->
-                if (err != null) {
-                    close(err)
-                    return@addSnapshotListener
-                }
-                val list = snap?.documents
-                    ?.mapNotNull { it.toRecipeDto() }
-                    ?.sortedByDescending { it.createdAt }
-                    ?: emptyList()
-
-                trySend(list)
-            }
-
         awaitClose { reg.remove() }
     }
 
@@ -96,13 +37,12 @@ class FirestoreRecipeRepository(
         val reg = paths.recipes()
             .document(recipeId)
             .addSnapshotListener { snap, err ->
-                if (err != null) {
+                if (err !=null) {
                     close(err)
                     return@addSnapshotListener
                 }
                 trySend(snap?.toRecipeDto())
             }
-
         awaitClose { reg.remove() }
     }
 
@@ -110,14 +50,10 @@ class FirestoreRecipeRepository(
         val now = System.currentTimeMillis()
         val uid = paths.uid()
 
-        val recipeId = if (recipe.id.isBlank()) {
-            paths.recipes().document().id
-        } else {
-            recipe.id
-        }
+        val recipeId = if (recipe.id.isBlank()) paths.recipes().document().id else recipe.id
 
         val payload = recipe.copy(
-            id = "", // docId is the id
+            id = "",
             authorUid = if (recipe.authorUid.isBlank()) uid else recipe.authorUid,
             createdAt = if (recipe.createdAt == 0L) now else recipe.createdAt,
             updatedAt = now
@@ -131,6 +67,7 @@ class FirestoreRecipeRepository(
             .set(
                 mapOf(
                     "isMarked" to marked,
+                    "marked" to marked, // optional compatibility
                     "updatedAt" to System.currentTimeMillis()
                 ),
                 SetOptions.merge()
@@ -138,7 +75,36 @@ class FirestoreRecipeRepository(
             .await()
     }
 
-    suspend fun deleteRecipe(recipeId: String) {
+    // ✅ Delete private only (keeps shared recipe online)
+    suspend fun deletePrivateOnly(recipeId: String) {
         paths.recipes().document(recipeId).delete().await()
+    }
+
+    // ✅ Delete private + delete shared (if sharedId exists)
+    suspend fun deletePrivateAndShared(recipeId: String) {
+        val snap = paths.recipes().document(recipeId).get().await()
+        val recipe = snap.toRecipeDto()
+
+        val sharedId = recipe?.sharedId?.trim().orEmpty()
+        if (sharedId.isNotBlank()) {
+            // if doc doesn't exist, delete is still fine
+            paths.sharedRecipes().document(sharedId).delete().await()
+        }
+
+        paths.recipes().document(recipeId).delete().await()
+    }
+
+    // Optional helper if later you want "unshare but keep private"
+    suspend fun unshareKeepPrivate(recipeId: String) {
+        val snap = paths.recipes().document(recipeId).get().await()
+        val recipe = snap.toRecipeDto()
+        val sharedId = recipe?.sharedId?.trim().orEmpty()
+
+        if (sharedId.isNotBlank()) {
+            paths.sharedRecipes().document(sharedId).delete().await()
+            paths.recipes().document(recipeId)
+                .set(mapOf("sharedId" to ""), SetOptions.merge())
+                .await()
+        }
     }
 }
