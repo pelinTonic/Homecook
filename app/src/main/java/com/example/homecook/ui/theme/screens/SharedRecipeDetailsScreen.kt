@@ -15,7 +15,6 @@ import androidx.compose.material.TextButton
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -27,44 +26,53 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.homecook.features.recipedetails.RecipeDetailsViewModel
+import com.example.homecook.features.shared.SharedRecipeDetailsViewModel
 import com.example.homecook.navigation.MainRoutes
 
 @Composable
-fun RecipeDetailsScreen(
-    recipeId: String,
+fun SharedRecipeDetailsScreen(
+    sharedId: String,
     rootNavController: NavController,
-    vm: RecipeDetailsViewModel = viewModel()
+    vm: SharedRecipeDetailsViewModel = viewModel()
 ) {
-    val recipe by vm.observe(recipeId).collectAsState(initial = null)
+    val recipe by vm.observe(sharedId).collectAsState(initial = null)
     var error by remember { mutableStateOf<String?>(null) }
-
-    val isShared = recipe?.sharedId?.isNotBlank() == true
+    var isSaving by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(recipe?.title ?: "Recipe") },
+                title = { Text(recipe?.title ?: "Shared Recipe") },
                 navigationIcon = {
                     IconButton(onClick = { rootNavController.popBackStack() }) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(
+                            imageVector = Icons.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color.White
+                        )
                     }
                 },
                 actions = {
-                    // Share / Unshare
-                    TextButton(onClick = {
-                        error = null
-                        if (isShared) vm.unshare(recipeId) { error = it }
-                        else vm.share(recipeId) { error = it }
-                    }) {
-                        Text(if (isShared) "Unshare" else "Share", color = Color.White)
-                    }
-
-                    // Edit
-                    IconButton(onClick = {
-                        rootNavController.navigate(MainRoutes.recipeEdit(recipeId))
-                    }) {
-                        Icon(Icons.Filled.Edit, contentDescription = "Edit", tint = Color.White)
+                    TextButton(
+                        onClick = {
+                            if (isSaving) return@TextButton
+                            error = null
+                            isSaving = true
+                            vm.importToMyRecipes(
+                                sharedId = sharedId,
+                                onDone = { newPrivateId ->
+                                    isSaving = false
+                                    // open the imported private recipe details
+                                    rootNavController.navigate(MainRoutes.recipeDetails(newPrivateId))
+                                },
+                                onError = { msg ->
+                                    isSaving = false
+                                    error = msg
+                                }
+                            )
+                        }
+                    ) {
+                        Text(if (isSaving) "Saving..." else "Save", color = Color.White)
                     }
                 }
             )
@@ -86,10 +94,6 @@ fun RecipeDetailsScreen(
             val r = recipe!!
 
             Text(r.title)
-            if (r.sharedId.isNotBlank()) {
-                Spacer(Modifier.height(6.dp))
-                Text("Shared ✅")
-            }
 
             error?.let {
                 Spacer(Modifier.height(10.dp))

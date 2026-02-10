@@ -11,7 +11,15 @@ object MainRoutes {
     val RECIPE_DETAILS_ROUTE = "$RECIPE_DETAILS/{$RECIPE_ID_ARG}"
     val RECIPE_EDIT_ROUTE = "$RECIPE_EDIT/{$RECIPE_ID_ARG}"
 
-    // Route builders for navigation
+    // Route builders
     fun recipeDetails(recipeId: String) = "$RECIPE_DETAILS/$recipeId"
     fun recipeEdit(recipeId: String) = "$RECIPE_EDIT/$recipeId"
+
+    // -------- Shared recipe details --------
+    const val SHARED_RECIPE_ID_ARG = "sharedRecipeId"
+    const val SHARED_RECIPE_DETAILS = "shared_recipe_details"
+
+    val SHARED_RECIPE_DETAILS_ROUTE = "$SHARED_RECIPE_DETAILS/{$SHARED_RECIPE_ID_ARG}"
+
+    fun sharedRecipeDetails(sharedId: String) = "$SHARED_RECIPE_DETAILS/$sharedId"
 }

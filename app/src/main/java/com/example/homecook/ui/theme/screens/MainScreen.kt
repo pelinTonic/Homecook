@@ -121,7 +121,15 @@ fun MainScreen(
 
             composable(MainTab.ShoppingList.route) { ShoppingListScreen() }
             composable(MainTab.Pantry.route) { PantryScreen() }
-            composable(MainTab.Shared.route) { SharedRecipesScreen() }
+            composable(MainTab.Shared.route) {
+                SharedRecipesScreen(
+                    onOpenShared = { sharedId ->
+                        rootNavController.navigate(MainRoutes.sharedRecipeDetails(sharedId))
+                    }
+                )
+            }
+
+            }
+
         }
     }
-}

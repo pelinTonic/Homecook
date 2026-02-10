@@ -1,5 +1,6 @@
 package com.example.homecook.data.remote
 
+import android.util.Log
 import com.example.homecook.data.remote.model.PantryItemDto
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
@@ -24,12 +25,17 @@ class FirestorePantryRepository(
             .orderBy("name")
             .addSnapshotListener { snap, err ->
                 if (err != null) {
-                    close(err)
+                    // ✅ expected during logout -> do not crash UI
+                    Log.w("FirestorePantryRepo", "observePantryItems error", err)
+                    trySend(emptyList())
+                    close()
                     return@addSnapshotListener
                 }
+
                 val list = snap?.documents?.mapNotNull { it.toPantryDto() } ?: emptyList()
                 trySend(list)
             }
+
         awaitClose { reg.remove() }
     }
 

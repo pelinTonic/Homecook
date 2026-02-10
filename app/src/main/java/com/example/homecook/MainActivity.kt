@@ -19,6 +19,8 @@ import com.example.homecook.ui.theme.screens.RecipeDetailsScreen
 import com.example.homecook.ui.theme.screens.RegisterScreen
 import com.example.homecook.ui.theme.screens.SplashScreen
 import com.google.firebase.FirebaseApp
+import com.example.homecook.ui.theme.screens.SharedRecipeDetailsScreen
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -79,7 +81,20 @@ class MainActivity : ComponentActivity() {
                             recipeId = recipeId,
                             rootNavController = navController
                         )
+
+
                     }
+                    // ✅ Shared recipe details
+                    composable(
+                        route = MainRoutes.SHARED_RECIPE_DETAILS_ROUTE,
+                        arguments = listOf(navArgument(MainRoutes.SHARED_RECIPE_ID_ARG) {
+                            type = NavType.StringType
+                        })
+                    ) { backStackEntry ->
+                        val sharedId = backStackEntry.arguments?.getString(MainRoutes.SHARED_RECIPE_ID_ARG)!!
+                        SharedRecipeDetailsScreen(sharedId = sharedId, rootNavController = navController)
+                    }
+
                 }
             }
         }

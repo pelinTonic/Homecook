@@ -1,5 +1,6 @@
 package com.example.homecook.data.remote
 
+import android.util.Log
 import com.example.homecook.data.remote.model.RecipeDto
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.Query
@@ -24,12 +25,17 @@ class FirestoreRecipeRepository(
             .orderBy("createdAt", Query.Direction.DESCENDING)
             .addSnapshotListener { snap, err ->
                 if (err != null) {
-                    close(err)
+                    // ✅ expected during logout -> do not crash UI
+                    Log.w("FirestoreRecipeRepo", "observeAllRecipes error", err)
+                    trySend(emptyList())
+                    close() // close normally (no exception)
                     return@addSnapshotListener
                 }
+
                 val list = snap?.documents?.mapNotNull { it.toRecipeDto() } ?: emptyList()
                 trySend(list)
             }
+
         awaitClose { reg.remove() }
     }
 
@@ -37,14 +43,20 @@ class FirestoreRecipeRepository(
         val reg = paths.recipes()
             .document(recipeId)
             .addSnapshotListener { snap, err ->
-                if (err !=null) {
-                    close(err)
+                if (err != null) {
+                    // ✅ expected during logout -> do not crash UI
+                    Log.w("FirestoreRecipeRepo", "observeRecipeById error recipeId=$recipeId", err)
+                    trySend(null)
+                    close()
                     return@addSnapshotListener
                 }
+
                 trySend(snap?.toRecipeDto())
             }
+
         awaitClose { reg.remove() }
     }
+
     suspend fun getRecipeOnce(recipeId: String): RecipeDto? {
         val snap = paths.recipes().document(recipeId).get().await()
         val dto = snap.toObject(RecipeDto::class.java) ?: return null
@@ -66,7 +78,6 @@ class FirestoreRecipeRepository(
         )
 
         paths.recipes().document(recipeId).set(payload, SetOptions.merge()).await()
-
     }
 
     suspend fun setMarked(recipeId: String, marked: Boolean) {
@@ -94,14 +105,13 @@ class FirestoreRecipeRepository(
 
         val sharedId = recipe?.sharedId?.trim().orEmpty()
         if (sharedId.isNotBlank()) {
-            // if doc doesn't exist, delete is still fine
             paths.sharedRecipes().document(sharedId).delete().await()
         }
 
         paths.recipes().document(recipeId).delete().await()
     }
 
-    // Optional helper if later you want "unshare but keep private"
+    // Optional helper: unshare but keep private
     suspend fun unshareKeepPrivate(recipeId: String) {
         val snap = paths.recipes().document(recipeId).get().await()
         val recipe = snap.toRecipeDto()

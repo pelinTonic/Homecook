@@ -1,5 +1,6 @@
 package com.example.homecook.data.remote
 
+import android.util.Log
 import com.example.homecook.data.remote.model.RecipeDto
 import com.example.homecook.data.remote.model.ShoppingItemDto
 import com.google.firebase.firestore.DocumentSnapshot
@@ -30,9 +31,13 @@ class FirestoreShoppingRepository(
             .orderBy("name")
             .addSnapshotListener { snap, err ->
                 if (err != null) {
-                    close(err)
+                    // ✅ expected during logout -> do not crash UI
+                    Log.w("FirestoreShoppingRepo", "observeShoppingItems error", err)
+                    trySend(emptyList())
+                    close()
                     return@addSnapshotListener
                 }
+
                 val list = snap?.documents?.mapNotNull { it.toShoppingDto() } ?: emptyList()
                 trySend(list)
             }
