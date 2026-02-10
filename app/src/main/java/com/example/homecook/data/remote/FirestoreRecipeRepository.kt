@@ -45,6 +45,12 @@ class FirestoreRecipeRepository(
             }
         awaitClose { reg.remove() }
     }
+    suspend fun getRecipeOnce(recipeId: String): RecipeDto? {
+        val snap = paths.recipes().document(recipeId).get().await()
+        val dto = snap.toObject(RecipeDto::class.java) ?: return null
+        dto.id = snap.id
+        return dto
+    }
 
     suspend fun saveRecipe(recipe: RecipeDto) {
         val now = System.currentTimeMillis()
@@ -59,7 +65,8 @@ class FirestoreRecipeRepository(
             updatedAt = now
         )
 
-        paths.recipes().document(recipeId).set(payload).await()
+        paths.recipes().document(recipeId).set(payload, SetOptions.merge()).await()
+
     }
 
     suspend fun setMarked(recipeId: String, marked: Boolean) {

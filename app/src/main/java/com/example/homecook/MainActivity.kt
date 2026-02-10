@@ -2,27 +2,28 @@ package com.example.homecook
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.homecook.ui.theme.HomeCookTheme
+import androidx.activity.compose.setContent
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.example.homecook.navigation.MainRoutes
 import com.example.homecook.navigation.Routes
-import com.example.homecook.ui.theme.screens.*
+import com.example.homecook.ui.theme.HomeCookTheme
+import com.example.homecook.ui.theme.screens.EditRecipeScreen
+import com.example.homecook.ui.theme.screens.LoginScreen
+import com.example.homecook.ui.theme.screens.MainScreen
+import com.example.homecook.ui.theme.screens.RecipeDetailsScreen
+import com.example.homecook.ui.theme.screens.RegisterScreen
+import com.example.homecook.ui.theme.screens.SplashScreen
 import com.google.firebase.FirebaseApp
-
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         FirebaseApp.initializeApp(this)
         enableEdgeToEdge()
 
@@ -34,7 +35,6 @@ class MainActivity : ComponentActivity() {
                     navController = navController,
                     startDestination = Routes.Splash.route
                 ) {
-
                     composable(Routes.Splash.route) {
                         SplashScreen(navController)
                     }
@@ -47,12 +47,41 @@ class MainActivity : ComponentActivity() {
                         RegisterScreen(navController)
                     }
 
-                    composable(Routes.Main.route) { MainScreen(navController)
+                    composable(Routes.Main.route) {
+                        MainScreen(navController)
+                    }
 
-                }
+                    // ✅ Recipe details
+                    composable(
+                        route = MainRoutes.RECIPE_DETAILS_ROUTE,
+                        arguments = listOf(navArgument(MainRoutes.RECIPE_ID_ARG) {
+                            type = NavType.StringType
+                        })
+                    ) { backStackEntry ->
+                        val recipeId =
+                            backStackEntry.arguments?.getString(MainRoutes.RECIPE_ID_ARG)!!
+                        RecipeDetailsScreen(
+                            recipeId = recipeId,
+                            rootNavController = navController
+                        )
+                    }
+
+                    // ✅ Edit recipe
+                    composable(
+                        route = MainRoutes.RECIPE_EDIT_ROUTE,
+                        arguments = listOf(navArgument(MainRoutes.RECIPE_ID_ARG) {
+                            type = NavType.StringType
+                        })
+                    ) { backStackEntry ->
+                        val recipeId =
+                            backStackEntry.arguments?.getString(MainRoutes.RECIPE_ID_ARG)!!
+                        EditRecipeScreen(
+                            recipeId = recipeId,
+                            rootNavController = navController
+                        )
+                    }
                 }
             }
         }
     }
 }
-
